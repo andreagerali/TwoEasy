@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' file:;">
+  <title>TwoEasy</title>
+  <link rel="stylesheet" href="../node_modules/katex/dist/katex.min.css">
+  <link rel="stylesheet" href="preview.css">
+  <link rel="stylesheet" href="vendor/wysiwyg.css">
+  <link rel="stylesheet" href="vendor/wysiwyg-dark.css" id="wysiwyg-dark" disabled>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-layout="split" data-theme="light">
+
+  <div id="toolbar">
+    <button data-cmd="new" title="New (Ctrl+N)">New</button>
+    <button data-cmd="open" title="Open (Ctrl+O)">Open</button>
+    <button data-cmd="save" title="Save (Ctrl+S)">Save</button>
+    <button data-cmd="formatJson" class="json-only" title="Pretty-print the JSON (Ctrl+Shift+F)">Format JSON</button>
+    <span class="sep md-only"></span>
+    <button data-cmd="format" data-arg="bold" class="md-only" title="Bold (Ctrl+B)"><b>B</b></button>
+    <button data-cmd="format" data-arg="italic" class="md-only" title="Italic (Ctrl+I)"><i>I</i></button>
+    <button data-cmd="format" data-arg="code" class="md-only" title="Inline code (Ctrl+Shift+`)"><code>&lt;/&gt;</code></button>
+    <button data-cmd="format" data-arg="link" class="md-only" title="Link (Ctrl+K)">Link</button>
+    <span class="sep md-only"></span>
+    <button data-cmd="heading" data-arg="1" class="md-only" title="Heading 1 (Ctrl+1)">H1</button>
+    <button data-cmd="heading" data-arg="2" class="md-only" title="Heading 2 (Ctrl+2)">H2</button>
+    <button data-cmd="heading" data-arg="3" class="md-only" title="Heading 3 (Ctrl+3)">H3</button>
+    <button data-cmd="prefix" data-arg="bullet" class="md-only" title="Bullet list (Ctrl+Shift+])">• List</button>
+    <button data-cmd="prefix" data-arg="number" class="md-only" title="Numbered list (Ctrl+Shift+[)">1. List</button>
+    <button data-cmd="insert" data-arg="table" class="md-only" title="Table (Ctrl+T)">Table</button>
+    <button data-cmd="insertImageFile" class="md-only" title="Insert image from file">Image</button>
+    <span class="sep md-only"></span>
+    <button data-cmd="print" class="md-only" title="Print the preview (Ctrl+P)">Print</button>
+    <button data-cmd="exportPdf" class="md-only" title="Export as PDF (Ctrl+Shift+E)">PDF</button>
+    <button data-cmd="exportDocx" class="md-only" title="Export as Word">Word</button>
+    <span class="grow"></span>
+    <button data-cmd="wysiwyg" id="wysiwyg-btn" class="md-only" title="Edit the preview directly (Ctrl+E)">Edit preview</button>
+    <div class="layout-switch md-only" title="Layout (Ctrl+Alt+1 / 2 / 3)">
+      <button data-layout="editor">Editor</button>
+      <button data-layout="split" class="active">Split</button>
+      <button data-layout="preview">Preview</button>
+    </div>
+  </div>
+
+  <div id="findbar" hidden>
+    <input id="find-input" type="search" placeholder="Find…" spellcheck="false">
+    <button id="find-prev" title="Previous (Shift+Enter)">▲</button>
+    <button id="find-next" title="Next (Enter)">▼</button>
+    <span id="find-status"></span>
+    <span class="sep"></span>
+    <input id="replace-input" type="text" placeholder="Replace with…" spellcheck="false">
+    <button id="replace-one">Replace</button>
+    <button id="replace-all">Replace all</button>
+    <span class="grow"></span>
+    <button id="find-close" title="Close (Esc)">×</button>
+  </div>
+
+  <div id="panes">
+    <div id="outline-pane" hidden>
+      <div class="pane-title">Outline</div>
+      <div id="outline-list"></div>
+    </div>
+    <div id="editor-pane">
+      <textarea id="editor" spellcheck="true" placeholder="Start writing Markdown here…"></textarea>
+      <div id="code-editor" hidden></div>
+    </div>
+    <div id="divider"></div>
+    <div id="preview-pane">
+      <article id="preview" class="markdown-body"></article>
+      <div id="wysiwyg" hidden></div>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <span id="status-file">Untitled</span>
+    <span id="status-dirty"></span>
+    <span id="status-autosave" hidden>autosave</span>
+    <span id="status-lint"></span>
+    <span class="grow"></span>
+    <span id="status-words" title="Word count details">0 words</span>
+  </div>
+
+  <div id="overlay" hidden>
+    <div id="overlay-box">
+      <div id="overlay-head"><strong id="overlay-title"></strong><button id="overlay-close">×</button></div>
+      <article id="overlay-body" class="markdown-body"></article>
+    </div>
+  </div>
+
+  <script src="../node_modules/markdown-it/dist/markdown-it.min.js"></script>
+  <script src="../node_modules/katex/dist/katex.min.js"></script>
+  <script src="math.js"></script>
+  <script src="textops.js"></script>
+  <script src="vendor/wysiwyg.js"></script>
+  <script src="vendor/code.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

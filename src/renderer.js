@@ -11,7 +11,7 @@ const outlineList = $('outline-list');
 const T = TwoEasyText;
 
 // ---------- document state ----------
-const doc = { path: null, savedText: '' };
+const doc = { path: null, savedText: '', eol: '\n' };
 let settings = { theme: 'light', editorFontSize: 14, syncScroll: true, autosave: false, layout: 'split', outline: false };
 let lastHeadings = [];
 
@@ -28,7 +28,14 @@ function refreshStatus() {
   $('status-words').textContent = `${words} word${words === 1 ? '' : 's'}`;
 }
 
-function loadDocument(path, text) {
+// The textarea always holds \n. Files keep their own line ending (CRLF, CR): it is detected here and
+// put back when saving, so opening a Windows file does not count as a change.
+function detectEol(text) { return text.includes('\r\n') ? '\r\n' : text.includes('\r') ? '\r' : '\n'; }
+function toDisk(text) { return doc.eol === '\n' ? text : text.replace(/\n/g, doc.eol); }
+
+function loadDocument(path, text, eol) {
+  doc.eol = eol || detectEol(text);
+  text = text.replace(/\r\n?/g, '\n');
   doc.path = path;
   doc.savedText = text;
   editor.value = text;
@@ -180,18 +187,18 @@ async function newDocument() {
 }
 
 async function save() {
-  const saved = await window.api.save({ path: doc.path, text: editor.value, ext: currentExt() });
+  const saved = await window.api.save({ path: doc.path, text: toDisk(editor.value), ext: currentExt() });
   if (saved) { doc.path = saved; doc.savedText = editor.value; refreshStatus(); }
   return !!saved;
 }
 window.__saveForClose = save;
 
 async function saveAs() {
-  const saved = await window.api.saveAs({ path: doc.path, text: editor.value, ext: currentExt() });
+  const saved = await window.api.saveAs({ path: doc.path, text: toDisk(editor.value), ext: currentExt() });
   if (saved) {
     doc.path = saved; doc.savedText = editor.value; refreshStatus();
     const lang = languageFor(saved, editor.value);
-    if (lang !== codeLanguage) loadDocument(saved, editor.value); // extension changed: switch mode
+    if (lang !== codeLanguage) loadDocument(saved, editor.value, doc.eol); // extension changed: switch mode
   }
 }
 
@@ -820,12 +827,13 @@ window.__smokeChecks = () => {
     images: [...preview.querySelectorAll('img')].map((i) => i.src + ':' + (i.naturalWidth > 0)),
     outlineItems: outlineList.querySelectorAll('.outline-item').length,
     theme: document.body.dataset.theme,
+    dirty: isDirty(),
   };
 };
 
 window.__smokeCode = () => {
   if (!code) return { mode: 'markdown' };
-  const out = { mode: 'code', language: codeLanguage, lint: statusLint.textContent, chars: editor.value.length, cmPresent: !!document.querySelector('#code-editor .cm-editor'), cmHeight: $('code-editor').clientHeight };
+  const out = { mode: 'code', language: codeLanguage, lint: statusLint.textContent, chars: editor.value.length, cmPresent: !!document.querySelector('#code-editor .cm-editor'), cmHeight: $('code-editor').clientHeight, dirty: isDirty() };
   if (codeLanguage === 'json') { out.formatError = code.format(); out.formattedLines = editor.value.split('\n').length; }
   return out;
 };
@@ -863,7 +871,7 @@ window.__smokeEdits = () => {
   editor.setSelectionRange(original.length, original.length);
   commands.insert('table'); out.table = /\| Column 1 \|/.test(editor.value);
   findInput.value = 'item'; replaceInput.value = 'thing'; replaceAll(); out.replaced = (editor.value.match(/thing/g) || []).length;
-  loadDocument(doc.path, original);
+  loadDocument(doc.path, original, doc.eol);
   return out;
 };
 
@@ -875,5 +883,5 @@ window.__smokeEdits = () => {
   setLayout(settings.layout, false);
   setOutline(settings.outline);
   // A file opened from the command line may already have arrived while settings were loading.
-  if (!doc.path) loadDocument(null, editor.value); else { render(); refreshStatus(); }
+  if (!doc.path) loadDocument(null, editor.value, doc.eol); else { render(); refreshStatus(); }
 })();

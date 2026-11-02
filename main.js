@@ -72,6 +72,34 @@ function createWindow() {
     }
   });
 
+  // Electron has no built-in right-click menu: spelling suggestions and clipboard items are built here.
+  win.webContents.on('context-menu', (_e, params) => {
+    const items = [];
+    if (params.misspelledWord) {
+      for (const s of params.dictionarySuggestions) {
+        items.push({ label: s, click: () => win.webContents.replaceMisspelling(s) });
+      }
+      if (!params.dictionarySuggestions.length) items.push({ label: 'No suggestions', enabled: false });
+      items.push({
+        label: 'Add to dictionary',
+        click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
+      });
+      items.push({ type: 'separator' });
+    }
+    if (params.isEditable) {
+      items.push(
+        { role: 'cut', enabled: params.editFlags.canCut },
+        { role: 'copy', enabled: params.editFlags.canCopy },
+        { role: 'paste', enabled: params.editFlags.canPaste },
+        { type: 'separator' },
+        { role: 'selectAll' },
+      );
+    } else if (params.selectionText) {
+      items.push({ role: 'copy' }, { type: 'separator' }, { role: 'selectAll' });
+    }
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
+  });
+
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };

@@ -2,6 +2,7 @@
 // Main process: window, menus, settings, file dialogs, printing and export.
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell, clipboard, nativeImage } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const fs = require('fs/promises');
 
 let win = null;
@@ -98,6 +99,13 @@ function createWindow() {
       items.push({ role: 'copy' }, { type: 'separator' }, { role: 'selectAll' });
     }
     if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
+  });
+
+  // Links clicked inside the HTML preview frame open in the system browser, never inside the frame.
+  win.webContents.on('will-frame-navigate', (e) => {
+    if (e.isMainFrame || e.url.startsWith(pathToFileURL(path.join(app.getPath('userData'), 'html-preview.html')).href)) return;
+    e.preventDefault();
+    if (/^https?:/i.test(e.url)) shell.openExternal(e.url);
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -470,6 +478,17 @@ async function runSmokeTest(outDir) {
 
 ipcMain.handle('shell:showInFolder', (_e, p) => shell.showItemInFolder(p));
 ipcMain.handle('shell:openExternal', (_e, url) => shell.openExternal(url));
+
+// HTML preview: the text is written to a temp page the sandboxed frame loads. A <base> makes
+// relative images/CSS resolve against the document's folder; a tiny script keeps #anchors working.
+const PREVIEW_SCRIPT = `<script>document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;e.preventDefault();var id=decodeURIComponent(a.getAttribute('href').slice(1));var el=id?document.getElementById(id)||document.getElementsByName(id)[0]:document.body;if(el)el.scrollIntoView();});</script>`;
+let previewSeq = 0;
+ipcMain.handle('html:preview', async (_e, { text, docPath }) => {
+  const base = docPath ? `<base href="${pathToFileURL(path.dirname(docPath) + path.sep).href}">` : '';
+  const file = path.join(app.getPath('userData'), 'html-preview.html');
+  await fs.writeFile(file, base + PREVIEW_SCRIPT + text, 'utf8');
+  return pathToFileURL(file).href + '?v=' + (++previewSeq);
+});
 ipcMain.handle('window:alwaysOnTop', (_e, on) => { if (win) win.setAlwaysOnTop(on); buildMenu(); });
 
 // ---------- app lifecycle ----------

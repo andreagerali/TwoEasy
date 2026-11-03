@@ -81,7 +81,7 @@ function enterCode(language, text) {
     text,
     language,
     dark: settings.theme === 'dark',
-    onChange: (t) => { if (t !== editor.value) { editor.value = t; refreshStatus(); scheduleAutosave(); } },
+    onChange: (t) => { if (t !== editor.value) { editor.value = t; refreshStatus(); scheduleAutosave(); if (codeLanguage === 'html') scheduleRender(); } },
     onStatus: (s) => {
       statusLint.className = s.ok ? (window.TwoEasyCode.lints(language) ? 'ok' : '') : 'error';
       const label = window.TwoEasyCode.label(language);
@@ -98,6 +98,7 @@ function exitCode() {
   codeLanguage = null;
   $('code-editor').innerHTML = '';
   $('code-editor').hidden = true;
+  htmlFrame.removeAttribute('src');
   statusLint.textContent = '';
   statusLint.className = '';
   delete document.body.dataset.mode;
@@ -303,8 +304,22 @@ function scheduleRender() {
   renderTimer = setTimeout(render, 120);
 }
 
+// HTML files: the main process writes the current text to a temp page (with a <base> for relative
+// paths) and the sandboxed frame loads it, so the page's own scripts and styles work.
+const htmlFrame = $('html-preview');
+let htmlSeq = 0;
+async function renderHtml() {
+  const seq = ++htmlSeq;
+  const url = await window.api.htmlPreview({ text: editor.value, docPath: doc.path });
+  if (seq === htmlSeq && codeLanguage === 'html') htmlFrame.src = url;
+}
+
 function render() {
-  if (code) { lastHeadings = []; outlineList.innerHTML = ''; return; }
+  if (code) {
+    lastHeadings = []; outlineList.innerHTML = '';
+    if (codeLanguage === 'html') renderHtml();
+    return;
+  }
   const { html, headings } = toHtml(editor.value);
   preview.innerHTML = html;
   fixImagePaths(preview);
@@ -544,8 +559,8 @@ function toggleFocus(force) {
   const divider = $('divider');
   const editorPane = $('editor-pane');
   let dragging = false;
-  divider.addEventListener('mousedown', () => { dragging = true; document.body.style.cursor = 'col-resize'; });
-  window.addEventListener('mouseup', () => { dragging = false; document.body.style.cursor = ''; });
+  divider.addEventListener('mousedown', () => { dragging = true; document.body.style.cursor = 'col-resize'; document.body.classList.add('dragging-divider'); });
+  window.addEventListener('mouseup', () => { dragging = false; document.body.style.cursor = ''; document.body.classList.remove('dragging-divider'); });
   window.addEventListener('mousemove', (e) => {
     if (!dragging) return;
     const panes = $('panes').getBoundingClientRect();

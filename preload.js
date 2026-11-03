@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   saveAs: (payload) => ipcRenderer.invoke('file:saveAs', payload),
   openDialog: () => ipcRenderer.invoke('dialog:open'),
   saveImage: (payload) => ipcRenderer.invoke('image:save', payload),
+  htmlPreview: (payload) => ipcRenderer.invoke('html:preview', payload),
   pickImage: () => ipcRenderer.invoke('image:pick'),
   pathForFile: (file) => webUtils.getPathForFile(file),
   copyHtml: (payload) => ipcRenderer.invoke('clipboard:writeHtml', payload),

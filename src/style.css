@@ -104,6 +104,17 @@ body[data-mode="code"] #outline-pane, body[data-mode="code"] #editor { display: 
 body[data-mode="code"] #editor-pane { flex: 1 !important; }
 /* code files have no preview: show the editor pane whatever layout (e.g. preview-only) was saved */
 body[data-mode="code"] #editor-pane { display: flex !important; flex-direction: column; }
+/* HTML files: live preview in a sandboxed frame, layout switch (Editor / Split / Preview) stays available */
+#html-preview { display: none; width: 100%; height: 100%; border: 0; background: #fff; }
+body[data-lang="html"] #html-preview { display: block; }
+body[data-lang="html"] #preview, body[data-lang="html"] #wysiwyg { display: none !important; }
+body[data-lang="html"] .layout-switch { display: flex !important; }
+body[data-lang="html"] #preview-pane { display: block !important; overflow: hidden; }
+body[data-lang="html"] #divider { display: block !important; }
+body[data-lang="html"][data-layout="editor"] #preview-pane, body[data-lang="html"][data-layout="editor"] #divider { display: none !important; }
+body[data-lang="html"][data-layout="preview"] #editor-pane, body[data-lang="html"][data-layout="preview"] #divider { display: none !important; }
+body[data-lang="html"][data-layout="preview"] #preview-pane { flex: 1 !important; }
+body.dragging-divider #html-preview { pointer-events: none; }
 #code-editor { flex: 1; min-height: 0; }
 #code-editor .cm-editor { height: 100%; }
 #code-editor .cm-editor { background: var(--editor-bg); color: var(--fg); }

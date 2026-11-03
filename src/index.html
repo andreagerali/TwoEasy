@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' file:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' file:; frame-src file:;">
   <title>TwoEasy</title>
   <link rel="stylesheet" href="../node_modules/katex/dist/katex.min.css">
   <link rel="stylesheet" href="preview.css">
@@ -69,6 +69,7 @@
     <div id="preview-pane">
       <article id="preview" class="markdown-body"></article>
       <div id="wysiwyg" hidden></div>
+      <iframe id="html-preview" sandbox="allow-scripts allow-forms" title="HTML preview"></iframe>
     </div>
   </div>
 

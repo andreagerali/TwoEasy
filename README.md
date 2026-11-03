@@ -1,6 +1,6 @@
 # TwoEasy
 
-A minimal Markdown editor for Windows, macOS and Linux: source on the left, live preview on the right.
+A lightweight text editor for Windows, macOS and Linux. Markdown with live preview and WYSIWYG editing, HTML with live preview, JSON, YAML and code files (Python, JavaScript, SQL, shell and more) with syntax colours and error marks.
 Built with Electron. No accounts, no licence, no cloud.
 
 ## Install

@@ -1,6 +1,6 @@
 # TwoEasy
 
-A minimal Markdown editor for Windows: source on the left, live preview on the right.
+A minimal Markdown editor for Windows, macOS and Linux: source on the left, live preview on the right.
 Built with Electron. No accounts, no licence, no cloud.
 
 ## Install

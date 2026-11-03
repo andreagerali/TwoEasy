@@ -474,12 +474,20 @@ ipcMain.handle('window:alwaysOnTop', (_e, on) => { if (win) win.setAlwaysOnTop(o
 
 // ---------- app lifecycle ----------
 
+// macOS delivers files through 'open-file', not argv. Before the app is ready the file becomes the
+// startup file; afterwards it opens in a new instance (one window per document, like the other platforms).
+app.on('open-file', (e, file) => {
+  e.preventDefault();
+  if (app.isReady()) require('child_process').spawn(process.execPath, app.isPackaged ? [file] : [__dirname, file], { detached: true, stdio: 'ignore' }).unref();
+  else pendingFile = file;
+});
+
 // No single-instance lock: every launch (double-click on a file, Open with) opens its own window,
 // so several documents can be open side by side.
 {
   app.whenReady().then(async () => {
     await loadSettings();
-    pendingFile = fileFromArgv(process.argv);
+    pendingFile = pendingFile || fileFromArgv(process.argv);
     if (process.env.TWOEASY_SMOKE) settings.reopenLast = false;
     buildMenu();
     createWindow();

@@ -89,6 +89,12 @@ function enterCode(language, text) {
         : window.TwoEasyCode.lints(language) ? `Valid ${label}` : label;
     },
   });
+  code.scroller.addEventListener('scroll', () => {
+    if (codeLanguage !== 'html' || !settings.syncScroll || frameLocked()) return;
+    frameLock();
+    const sc = code.scroller;
+    toFrame({ t: 'ratio', r: sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight) });
+  });
 }
 
 function exitCode() {
@@ -429,8 +435,74 @@ const FORMATS = {
   strike: ['~~', '~~', 'text'],
   code: ['`', '`', 'code'],
   math: ['$', '$', 'x^2'],
+  underline: ['<u>', '</u>', 'text'],
+  mark: ['<mark>', '</mark>', 'text'],
+  sup: ['<sup>', '</sup>', 'text'],
+  sub: ['<sub>', '</sub>', 'text'],
 };
+
+// ---------- HTML files: preview <-> source ----------
+// The preview page (src/preview-bridge.js) reports its selection and scroll position; the editor
+// scrolls along, and a format command applied while the preview has the focus tags the matching source.
+const HTML_TAGS = {
+  bold: ['<b>', '</b>'], italic: ['<i>', '</i>'], strike: ['<s>', '</s>'], code: ['<code>', '</code>'],
+  underline: ['<u>', '</u>'], mark: ['<mark>', '</mark>'], sup: ['<sup>', '</sup>'], sub: ['<sub>', '</sub>'],
+  link: ['<a href="">', '</a>'],
+};
+let frameTexts = [];
+let frameSel = null;
+let frameTop = 0;
+let frameMax = 1;
+let frameLockUntil = 0;
+const frameLocked = () => performance.now() < frameLockUntil;
+function frameLock() { frameLockUntil = performance.now() + 150; }
+function toFrame(msg) { if (htmlFrame.contentWindow) htmlFrame.contentWindow.postMessage({ twoeasy: 1, ...msg }, '*'); }
+
+window.addEventListener('message', (e) => {
+  const m = e.data;
+  if (e.source !== htmlFrame.contentWindow || !m || m.twoeasy !== 1) return;
+  if (m.t === 'ready') {
+    frameTexts = []; frameSel = null;
+    frameLock();
+    toFrame({ t: 'top', y: frameTop }); // a reload keeps the scroll position
+  } else if (m.t === 'sel') {
+    if (Array.isArray(m.texts)) frameTexts = m.texts.map(String);
+    const s = m.sel;
+    frameSel = s && s.s && s.e && [s.s.n, s.s.o, s.e.n, s.e.o].every(Number.isInteger) ? s : null;
+  } else if (m.t === 'scroll') {
+    frameTop = Number(m.y) || 0; frameMax = Number(m.max) || 1;
+    if (code && codeLanguage === 'html' && settings.syncScroll && !frameLocked()) {
+      frameLock();
+      const sc = code.scroller;
+      sc.scrollTop = (frameTop / frameMax) * Math.max(0, sc.scrollHeight - sc.clientHeight);
+    }
+  }
+});
+
+function formatHtml(kind) {
+  const tag = HTML_TAGS[kind];
+  if (!tag) return flashStatus('Not available for HTML');
+  const [open, close] = tag;
+  if (document.activeElement === htmlFrame && frameSel) {
+    const src = code.getText();
+    const segs = TwoEasyHtmlMap.scan(src);
+    const pieces = TwoEasyHtmlMap.rangesFor(frameSel, frameTexts, TwoEasyHtmlMap.align(frameTexts, segs, src), segs, src);
+    if (!pieces || !pieces.length) return flashStatus('Cannot match the selection to the source');
+    const changes = [];
+    for (const p of pieces) changes.push({ from: p.start, to: p.start, insert: open }, { from: p.end, to: p.end, insert: close });
+    frameSel = null;
+    return code.applyChanges(changes);
+  }
+  const { from, to } = code.getSelection();
+  const caret = kind === 'link' && from === to ? from + '<a href="'.length : null;
+  code.applyChanges([{ from, to: from, insert: open }, { from: to, to, insert: close }],
+    caret != null ? caret : from + open.length, caret != null ? caret : to + open.length);
+  code.focus();
+}
+
 function format(kind) {
+  if (code && codeLanguage === 'html') return formatHtml(kind);
+  if (wys && ['underline', 'mark', 'sup', 'sub'].includes(kind)) return flashStatus('Not available in the visual editor');
   if (wys) return wys.command(kind);
   if (kind === 'link') {
     const [text, s, e] = sel();
@@ -801,7 +873,7 @@ function flashStatus(msg) {
 }
 function runCommand(name, arg) {
   if (!commands[name]) return;
-  if (code && NOT_FOR_CODE.has(name)) return flashStatus('Not available for code files');
+  if (code && NOT_FOR_CODE.has(name) && !(codeLanguage === 'html' && name === 'format')) return flashStatus('Not available for code files');
   commands[name](arg);
 }
 for (const b of document.querySelectorAll('[data-cmd]')) {

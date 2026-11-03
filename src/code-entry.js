@@ -108,6 +108,13 @@ function create({ root, text, language, dark, onChange, onStatus }) {
     setText: (t) => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: t } }),
     setDark: (d) => view.dispatch({ effects: themeComp.reconfigure(d ? oneDark : []) }),
     focus: () => view.focus(),
+    scroller: view.scrollDOM,
+    getSelection: () => { const r = view.state.selection.main; return { from: r.from, to: r.to }; },
+    // changes: [{from, to, insert}] in positions of the current text; optional selection afterwards.
+    applyChanges: (changes, selFrom, selTo) => {
+      const sorted = changes.slice().sort((a, b) => a.from - b.from);
+      view.dispatch({ changes: sorted, ...(selFrom != null ? { selection: { anchor: selFrom, head: selTo == null ? selFrom : selTo } } : {}) });
+    },
     find: () => openSearchPanel(view),
     scrollToLine: (n) => {
       const line = view.state.doc.line(Math.min(Math.max(1, n), view.state.doc.lines));

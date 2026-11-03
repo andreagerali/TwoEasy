@@ -240,6 +240,11 @@ function buildMenu() {
       { label: 'Inline code', accelerator: 'CmdOrCtrl+Shift+`', click: cmd('format', 'code') },
       { label: 'Link', accelerator: 'CmdOrCtrl+K', click: cmd('format', 'link') },
       { label: 'Inline formula', accelerator: 'CmdOrCtrl+M', click: cmd('format', 'math') },
+      { type: 'separator' },
+      { label: 'Underline', click: cmd('format', 'underline') },
+      { label: 'Highlight', click: cmd('format', 'mark') },
+      { label: 'Superscript', click: cmd('format', 'sup') },
+      { label: 'Subscript', click: cmd('format', 'sub') },
     ] },
     { label: '&Paragraph', submenu: [
       ...[1, 2, 3, 4, 5, 6].map((n) => ({ label: `Heading ${n}`, accelerator: `CmdOrCtrl+${n}`, click: cmd('heading', n) })),
@@ -480,13 +485,14 @@ ipcMain.handle('shell:showInFolder', (_e, p) => shell.showItemInFolder(p));
 ipcMain.handle('shell:openExternal', (_e, url) => shell.openExternal(url));
 
 // HTML preview: the text is written to a temp page the sandboxed frame loads. A <base> makes
-// relative images/CSS resolve against the document's folder; a tiny script keeps #anchors working.
-const PREVIEW_SCRIPT = `<script>document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^="#"]');if(!a)return;e.preventDefault();var id=decodeURIComponent(a.getAttribute('href').slice(1));var el=id?document.getElementById(id)||document.getElementsByName(id)[0]:document.body;if(el)el.scrollIntoView();});</script>`;
+// relative images/CSS resolve against the document's folder; a small script (src/preview-bridge.js) keeps #anchors working and reports selection and scroll.
+const bridgeFile = path.join(__dirname, 'src', 'preview-bridge.js');
 let previewSeq = 0;
 ipcMain.handle('html:preview', async (_e, { text, docPath }) => {
   const base = docPath ? `<base href="${pathToFileURL(path.dirname(docPath) + path.sep).href}">` : '';
   const file = path.join(app.getPath('userData'), 'html-preview.html');
-  await fs.writeFile(file, base + PREVIEW_SCRIPT + text, 'utf8');
+  const bridge = '<script>' + await fs.readFile(bridgeFile, 'utf8') + '</script>';
+  await fs.writeFile(file, base + bridge + text, 'utf8');
   return pathToFileURL(file).href + '?v=' + (++previewSeq);
 });
 ipcMain.handle('window:alwaysOnTop', (_e, on) => { if (win) win.setAlwaysOnTop(on); buildMenu(); });

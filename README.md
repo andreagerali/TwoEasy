@@ -57,6 +57,7 @@ Downloaded as a file, `.\install.ps1 -Silent` skips the installer wizard.
   bracket matching, folding, search (Ctrl+F), errors marked in the gutter and in the status bar.
 - Same editor for Python, JavaScript/TypeScript, HTML, CSS, XML, SQL, shell, PowerShell, TOML, INI/env.
   Syntax errors are flagged for JSON, YAML, Python, JavaScript/TypeScript, CSS and XML.
+- HTML files have a live preview: the two panes scroll together, and text selected in the preview can be tagged from the Format menu (bold, italic, underline, code, link...): the matching tags are written into the source. Works on text present in the file, not on text a script generates.
 - Any other text file (`.gitignore`, `Dockerfile`, `.log`...) opens as plain text; if it is valid JSON it is shown as JSON.
   Binary files (images, `.exe`, `.docx`) are refused with "File not supported".
 - Edit → Format JSON (Ctrl+Shift+F) pretty-prints a JSON file. Save As with another extension switches mode.

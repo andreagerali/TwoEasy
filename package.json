@@ -11,9 +11,9 @@
     "start": "electron .",
     "build:ui": "esbuild src/code-entry.js --bundle --format=iife --minify --outdir=src/vendor --entry-names=code && esbuild src/wysiwyg-entry.js --bundle --format=iife --minify --outdir=src/vendor --entry-names=wysiwyg --loader:.woff2=file --loader:.woff=file --loader:.ttf=file --asset-names=fonts/[name] && esbuild node_modules/@milkdown/crepe/lib/theme/crepe-dark/style.css --bundle --minify --outdir=src/vendor --entry-names=wysiwyg-dark --loader:.woff2=file --loader:.woff=file --loader:.ttf=file --asset-names=fonts/[name]",
     "predist": "npm run build:ui",
-    "dist": "electron-builder --win",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

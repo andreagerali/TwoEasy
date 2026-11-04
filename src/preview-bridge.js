@@ -71,9 +71,31 @@
     });
   });
 
+  // Ctrl + wheel: the editor window owns the zoom value (saved), the page only applies it.
+  window.addEventListener('wheel', function (e) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    post({ t: 'zoom', d: e.deltaY < 0 ? 1 : -1 });
+  }, { passive: false });
+
   window.addEventListener('message', function (e) {
     var m = e.data;
     if (e.source !== parentWin || !m || m.twoeasy !== 1) return;
+    if (m.t === 'texts') { post({ t: 'texts', texts: textNodes().map(function (n) { return n.data; }), req: m.req }); return; }
+    if (m.t === 'show') { // select a range inside text node n and bring it into view
+      var node = textNodes()[m.n];
+      if (!node) return;
+      var r = document.createRange();
+      r.setStart(node, Math.min(m.o, node.data.length));
+      r.setEnd(node, Math.min(Math.max(m.e, m.o), node.data.length));
+      var s = getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+      var box = (node.parentNode || document.body).getBoundingClientRect();
+      window.scrollTo(0, Math.max(0, window.scrollY + box.top - window.innerHeight / 3));
+      return;
+    }
+    if (m.t === 'zoom') { document.documentElement.style.zoom = String(Number(m.z) || 1); return; }
     if (m.t === 'ratio') window.scrollTo(0, Number(m.r) * maxScroll());
     else if (m.t === 'top') window.scrollTo(0, Number(m.y) || 0);
   });

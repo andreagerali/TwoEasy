@@ -469,10 +469,16 @@ function toFrame(msg) { if (htmlFrame.contentWindow) htmlFrame.contentWindow.pos
 window.addEventListener('message', (e) => {
   const m = e.data;
   if (e.source !== htmlFrame.contentWindow || !m || m.twoeasy !== 1) return;
-  if (m.t === 'ready') {
+  if (m.t === 'zoom') {
+    previewZoomBy(Number(m.d) || 0);
+  } else if (m.t === 'ready') {
     frameTexts = []; frameSel = null;
+    toFrame({ t: 'zoom', z: settings.previewZoom });
     frameLock();
     toFrame({ t: 'top', y: frameTop }); // a reload keeps the scroll position
+  } else if (m.t === 'texts') {
+    frameTexts = Array.isArray(m.texts) ? m.texts.map(String) : [];
+    if (pendingShow) { const f = pendingShow; pendingShow = null; f(); }
   } else if (m.t === 'sel') {
     if (Array.isArray(m.texts)) frameTexts = m.texts.map(String);
     const s = m.sel;
@@ -487,6 +493,86 @@ window.addEventListener('message', (e) => {
     }
   }
 });
+
+// ---------- "go to this text in the other pane" (right-click menu) ----------
+let pendingShow = null;
+const holdSync = (ms = 800) => { frameLockUntil = performance.now() + ms; scrollLock = true; setTimeout(() => { scrollLock = false; }, ms); };
+
+function gotoHtml() {
+  const src = code.getText();
+  const segs = TwoEasyHtmlMap.scan(src);
+  if (document.activeElement === htmlFrame && frameSel) { // preview -> source
+    const pieces = TwoEasyHtmlMap.rangesFor(frameSel, frameTexts, TwoEasyHtmlMap.align(frameTexts, segs, src), segs, src);
+    if (!pieces || !pieces.length) return flashStatus('Cannot match the selection to the source');
+    holdSync();
+    return code.select(pieces[0].start, pieces[pieces.length - 1].end);
+  }
+  const { from, to } = code.getSelection(); // source -> preview
+  if (from === to) return flashStatus('Select some text first');
+  pendingShow = () => {
+    const map = TwoEasyHtmlMap.align(frameTexts, segs, src);
+    const si = segs.findIndex((s) => s.end > from);
+    const i = si < 0 ? -1 : map.indexOf(si);
+    if (i < 0) return flashStatus('This text is not shown in the preview');
+    const dec = TwoEasyHtmlMap.decode(src, segs[si]);
+    let k0 = dec.rs.findIndex((r) => r >= from);
+    if (k0 < 0) k0 = 0;
+    let k1 = dec.re.length;
+    while (k1 > 0 && dec.re[k1 - 1] > to) k1--;
+    const shift = Math.max(0, dec.text.indexOf(frameTexts[i]));
+    const o = Math.max(0, k0 - shift);
+    holdSync();
+    toFrame({ t: 'show', n: i, o, e: Math.max(o, k1 - shift) });
+  };
+  toFrame({ t: 'texts' });
+}
+
+// Markdown: the source has markup the preview lacks, so words are matched with markup allowed between them.
+const MD_GAP = '[\\s*_`~\\\\\\[\\]()<>#|!]*';
+const escRx = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function gotoMarkdown() {
+  const inEditor = document.activeElement === editor && editor.selectionStart !== editor.selectionEnd;
+  if (!inEditor) { // preview -> source
+    const s = getSelection();
+    const words = s.toString().split(/\s+/).filter(Boolean).slice(0, 12);
+    if (!words.length || !preview.contains(s.anchorNode)) return flashStatus('Select some text first');
+    const want = (preview.parentElement.scrollTop / Math.max(1, preview.parentElement.scrollHeight)) * editor.value.length;
+    let best = null;
+    for (const m of editor.value.matchAll(new RegExp(words.map(escRx).join(MD_GAP), 'gi'))) {
+      if (!best || Math.abs(m.index - want) < Math.abs(best.index - want)) best = m;
+    }
+    if (!best) return flashStatus('Cannot find this text in the source');
+    holdSync();
+    editor.focus();
+    editor.setSelectionRange(best.index, best.index + best[0].length);
+    return scrollEditorTo(best.index);
+  }
+  const text = editor.value.slice(editor.selectionStart, editor.selectionEnd)
+    .replace(/\]\([^)]*\)/g, ' ').replace(/[*_`~#>|[\]\\]/g, ' ');
+  const words = text.split(/\s+/).filter(Boolean).slice(0, 12);
+  if (!words.length) return flashStatus('Select some text first');
+  const nodes = [];
+  const w = document.createTreeWalker(preview, NodeFilter.SHOW_TEXT);
+  let full = '';
+  for (let n = w.nextNode(); n; n = w.nextNode()) { nodes.push([n, full.length]); full += n.data; }
+  const m = new RegExp(words.map(escRx).join('\\s*'), 'i').exec(full);
+  if (!m) return flashStatus('Cannot find this text in the preview');
+  const at = (pos, end) => {
+    let k = nodes.length - 1;
+    while (k > 0 && (end ? nodes[k][1] >= pos : nodes[k][1] > pos)) k--;
+    return [nodes[k][0], pos - nodes[k][1]];
+  };
+  const r = document.createRange();
+  r.setStart(...at(m.index, false));
+  r.setEnd(...at(m.index + m[0].length, true));
+  const sel = getSelection();
+  sel.removeAllRanges();
+  sel.addRange(r);
+  const pane = $('preview-pane');
+  holdSync();
+  pane.scrollTop += r.getBoundingClientRect().top - pane.getBoundingClientRect().top - pane.clientHeight / 3;
+}
 
 function formatHtml(kind) {
   const tag = HTML_TAGS[kind];
@@ -625,6 +711,31 @@ function applyEditorFont(size) {
   settings.editorFontSize = size;
   document.documentElement.style.setProperty('--editor-font-size', size + 'px');
 }
+// Preview zoom (Markdown preview and HTML frame), 50%..300% in 10% steps.
+function applyPreviewZoom(z) {
+  settings.previewZoom = z;
+  preview.style.zoom = z;
+  $('wysiwyg').style.zoom = z;
+  toFrame({ t: 'zoom', z });
+}
+function previewZoomBy(d) {
+  const z = Math.min(3, Math.max(0.5, Math.round(((settings.previewZoom || 1) + d * 0.1) * 10) / 10));
+  applyPreviewZoom(z);
+  window.api.setSetting('previewZoom', z);
+}
+// Ctrl + wheel: over the editor it changes the font size, over the preview its zoom.
+window.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;
+  const d = e.deltaY < 0 ? 1 : -1;
+  if (e.target.closest('#editor-pane')) {
+    e.preventDefault();
+    applyEditorFont(Math.min(32, Math.max(9, settings.editorFontSize + d)));
+    window.api.setSetting('editorFontSize', settings.editorFontSize);
+  } else if (e.target.closest('#preview-pane')) {
+    e.preventDefault();
+    previewZoomBy(d);
+  }
+}, { passive: false });
 function setOutline(on) {
   settings.outline = on;
   $('outline-pane').hidden = !on;
@@ -870,6 +981,12 @@ const commands = {
   insert: insertBlock,
   layout: setLayout,
   focus: () => toggleFocus(),
+  gotoOther: () => {
+    if (wys) return flashStatus('Not available in the visual editor');
+    if (!code) return gotoMarkdown();
+    if (codeLanguage === 'html') return gotoHtml();
+    flashStatus('Only for Markdown and HTML');
+  },
   editorFont: (delta) => { applyEditorFont(Math.min(32, Math.max(9, settings.editorFontSize + Number(delta)))); window.api.setSetting('editorFontSize', settings.editorFontSize); },
   counts: showCounts,
   cheatsheet: () => showOverlay('Markdown cheat sheet', toHtml(CHEATSHEET).html),
@@ -976,6 +1093,7 @@ window.__smokeEdits = () => {
   settings = { ...settings, ...(await window.api.getSettings()) };
   applyTheme(settings.theme);
   applyEditorFont(settings.editorFontSize);
+  applyPreviewZoom(settings.previewZoom || 1);
   setLayout(settings.layout, false);
   setOutline(settings.outline);
   // A file opened from the command line may already have arrived while settings were loading.

@@ -98,6 +98,9 @@ function createWindow() {
     } else if (params.selectionText) {
       items.push({ role: 'copy' }, { type: 'separator' }, { role: 'selectAll' });
     }
+    if (params.selectionText) {
+      items.push({ type: 'separator' }, { label: 'Go to this text in the other pane', click: () => send('cmd', 'gotoOther') });
+    }
     if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
   });
 

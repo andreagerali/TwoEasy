@@ -115,6 +115,10 @@ function create({ root, text, language, dark, onChange, onStatus }) {
       if (!m) return 0;
       return view.lineBlockAt(m.index).top + view.documentPadding.top;
     },
+    select: (from, to) => {
+      view.dispatch({ selection: { anchor: from, head: to }, effects: EditorView.scrollIntoView(from, { y: 'center' }) });
+      view.focus();
+    },
     getSelection: () => { const r = view.state.selection.main; return { from: r.from, to: r.to }; },
     // changes: [{from, to, insert}] in positions of the current text; optional selection afterwards.
     applyChanges: (changes, selFrom, selTo) => {

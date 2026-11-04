@@ -289,7 +289,7 @@ function buildMenu() {
       { label: 'Markdown cheat sheet', click: cmd('cheatsheet') },
       { label: 'About TwoEasy', click: () => dialog.showMessageBox(win, {
           type: 'info', title: 'About TwoEasy', message: `TwoEasy ${app.getVersion()}`,
-          detail: 'A minimal Markdown editor.\nSource on the left, preview on the right.\n\nCreated by Andrea Gerali, 2026.',
+          detail: 'A lightweight text editor for Markdown, HTML, JSON, YAML and code.\nSource on the left, preview on the right.\n\nCreated by Andrea Gerali, 2026.',
         }) },
     ] },
   ];

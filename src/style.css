@@ -101,7 +101,7 @@ button code { font-size: 12px; }
 body[data-mode="code"] .code-only, body[data-lang="json"] .json-only { display: inline-block; }
 body[data-mode="code"] .md-only, body[data-mode="code"] #preview-pane, body[data-mode="code"] #divider,
 body[data-mode="code"] #outline-pane, body[data-mode="code"] #editor { display: none !important; }
-body[data-mode="code"] #editor-pane { flex: 1 !important; }
+body[data-mode="code"]:not([data-lang="html"]) #editor-pane { flex: 1 !important; }
 /* code files have no preview: show the editor pane whatever layout (e.g. preview-only) was saved */
 body[data-mode="code"] #editor-pane { display: flex !important; flex-direction: column; }
 /* HTML files: live preview in a sandboxed frame, layout switch (Editor / Split / Preview) stays available */

@@ -109,6 +109,12 @@ function create({ root, text, language, dark, onChange, onStatus }) {
     setDark: (d) => view.dispatch({ effects: themeComp.reconfigure(d ? oneDark : []) }),
     focus: () => view.focus(),
     scroller: view.scrollDOM,
+    // Scroll offset (px) of the line holding the <body> tag, 0 if there is none: what comes before it never shows in a preview.
+    bodyTop: () => {
+      const m = /<body[\s>]/i.exec(view.state.doc.toString());
+      if (!m) return 0;
+      return view.lineBlockAt(m.index).top + view.documentPadding.top;
+    },
     getSelection: () => { const r = view.state.selection.main; return { from: r.from, to: r.to }; },
     // changes: [{from, to, insert}] in positions of the current text; optional selection afterwards.
     applyChanges: (changes, selFrom, selTo) => {

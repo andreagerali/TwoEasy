@@ -93,8 +93,16 @@ function enterCode(language, text) {
     if (codeLanguage !== 'html' || !settings.syncScroll || frameLocked()) return;
     frameLock();
     const sc = code.scroller;
-    toFrame({ t: 'ratio', r: sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight) });
+    // the <head> is not shown: the preview stays at the top until the editor reaches <body>
+    const b = bodyOffset();
+    toFrame({ t: 'ratio', r: Math.max(0, sc.scrollTop - b) / Math.max(1, sc.scrollHeight - sc.clientHeight - b) });
   });
+}
+
+// Editor scroll offset where <body> starts, never past the scrollable range.
+function bodyOffset() {
+  const sc = code.scroller;
+  return Math.min(code.bodyTop(), Math.max(0, sc.scrollHeight - sc.clientHeight - 1));
 }
 
 function exitCode() {
@@ -474,7 +482,8 @@ window.addEventListener('message', (e) => {
     if (code && codeLanguage === 'html' && settings.syncScroll && !frameLocked()) {
       frameLock();
       const sc = code.scroller;
-      sc.scrollTop = (frameTop / frameMax) * Math.max(0, sc.scrollHeight - sc.clientHeight);
+      const b = bodyOffset();
+      sc.scrollTop = frameTop <= 0 ? Math.min(sc.scrollTop, b) : b + (frameTop / frameMax) * Math.max(0, sc.scrollHeight - sc.clientHeight - b);
     }
   }
 });
